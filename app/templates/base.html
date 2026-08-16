@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}Clarity A.I.P{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <header class="topo">
+    <a class="marca" href="/busca">Clarity A.I.P</a>
+    <nav>
+      <a href="/busca">Busca</a>
+      <a href="/enviar">Enviar documento</a>
+      <a href="/curadoria">Curadoria</a>
+    </nav>
+    <span class="usuario" id="usuario-logado"></span>
+  </header>
+  <main>
+    {% block conteudo %}{% endblock %}
+  </main>
+  <script src="/static/js/common.js"></script>
+  {% block script %}{% endblock %}
+</body>
+</html>

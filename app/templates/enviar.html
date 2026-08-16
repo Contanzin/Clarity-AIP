@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block titulo %}Enviar documento — Clarity A.I.P{% endblock %}
+{% block conteudo %}
+<div class="card">
+  <h1>Enviar documento</h1>
+  <p style="color: var(--cor-texto-suave); font-size: 0.9rem;">
+    A IA analisa o conteúdo e sugere uma área e nível de acesso. O documento fica
+    <strong>pendente</strong> (inacessível) até um curador aprovar em
+    <a href="/curadoria">Curadoria</a>.
+  </p>
+  <div id="erro-envio" class="erro" style="display: none;"></div>
+  <form id="form-envio">
+    <label for="titulo">Título</label>
+    <input type="text" id="titulo" name="titulo" required maxlength="500">
+
+    <label for="conteudo">Conteúdo (cole o texto)</label>
+    <textarea id="conteudo" name="conteudo" rows="8" placeholder="Cole o texto do documento aqui..."></textarea>
+
+    <label for="arquivo">Ou envie um arquivo .txt</label>
+    <input type="file" id="arquivo" name="arquivo" accept=".txt">
+
+    <button type="submit" id="botao-enviar">Enviar</button>
+  </form>
+</div>
+<div id="resultado-envio"></div>
+{% endblock %}
+{% block script %}
+<script src="/static/js/enviar.js"></script>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block titulo %}Busca — Clarity A.I.P{% endblock %}
+{% block conteudo %}
+<div class="card">
+  <h1>Faça uma pergunta</h1>
+  <p style="color: var(--cor-texto-suave); font-size: 0.9rem;">
+    O sistema aponta o documento oficial e resume de forma fiel — nunca responde livremente.
+  </p>
+  <form id="form-busca">
+    <label for="pergunta">Pergunta</label>
+    <input type="text" id="pergunta" name="pergunta" placeholder="Ex: Qual o desconto máximo que um revendedor pode aplicar?" required>
+    <button type="submit" id="botao-buscar">Buscar</button>
+  </form>
+</div>
+<div id="resultado"></div>
+{% endblock %}
+{% block script %}
+<script src="/static/js/busca.js"></script>
+{% endblock %}

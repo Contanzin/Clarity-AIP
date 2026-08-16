@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block titulo %}Curadoria — Clarity A.I.P{% endblock %}
+{% block conteudo %}
+<h1>Sugestões pendentes de revisão</h1>
+<p style="color: var(--cor-texto-suave); font-size: 0.9rem;">
+  Você só vê aqui o que já tem clearance para aprovar — quem aprova uma tag precisa
+  ele mesmo ter acesso ao resultado final.
+</p>
+<div id="lista-pendentes"></div>
+{% endblock %}
+{% block script %}
+<script>
+  const AREAS_VALIDAS = {{ areas_validas | tojson }};
+</script>
+<script src="/static/js/curadoria.js"></script>
+{% endblock %}

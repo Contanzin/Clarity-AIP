@@ -141,14 +141,3 @@ venv\Scripts\python.exe -m pytest tests/ -v
 
 Os testes rodam contra o banco de desenvolvimento real (não um banco separado) e limpam os dados que criam ao final. As chamadas ao Gemini são mockadas nos testes de ingestão/busca, para não depender de rede/quota.
 
-## Observação de privacidade
-
-O free tier do Gemini pode usar dados de requisição para melhorar o modelo do Google. No protótipo, isso só é aceitável com dados sintéticos ou anonimizados. Não use dados reais da Claro sem um plano pago com garantias contratuais de privacidade.
-
-## Publicando em um repositório público
-
-Antes de dar `git push`, confira:
-
-- `.env` (onde fica a `GEMINI_API_KEY` real) está no `.gitignore` — nunca deve ser versionado. Só `.env.example`, com valores fictícios, deve ir pro repositório.
-- Rode `git status` depois de um `git add` amplo e confira a lista de arquivos antes de commitar.
-- Se uma chave real for commitada por engano em algum momento, revogue/gere uma nova em [aistudio.google.com/apikey](https://aistudio.google.com/apikey) imediatamente — remover o arquivo em um commit futuro não apaga a chave do histórico do Git, e repositórios públicos são varridos por bots em minutos.

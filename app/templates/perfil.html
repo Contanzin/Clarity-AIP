@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block titulo %}Perfil — Clarity A.I.P{% endblock %}
+{% block conteudo %}
+<h1>Meu perfil</h1>
+<div id="dados-perfil" class="card">Carregando...</div>
+
+<h2>Trocar senha</h2>
+<div class="card">
+  <div id="erro-senha" class="erro" style="display: none;"></div>
+  <div id="sucesso-senha" class="erro" style="display: none; color: var(--cor-sucesso); background: var(--cor-sucesso-fundo); border-color: var(--cor-sucesso);"></div>
+  <form id="form-senha">
+    <label for="senha-atual">Senha atual</label>
+    <input type="password" id="senha-atual" required>
+    <label for="senha-nova">Nova senha</label>
+    <input type="password" id="senha-nova" minlength="4" required>
+    <label for="senha-nova-confirmar">Confirmar nova senha</label>
+    <input type="password" id="senha-nova-confirmar" minlength="4" required>
+    <button type="submit">Trocar senha</button>
+  </form>
+</div>
+
+<h2>Meus arquivos</h2>
+<p style="color: var(--cor-texto-suave); font-size: 0.9rem;">
+  Todos os documentos aprovados que você já tem permissão de acessar.
+</p>
+<div id="lista-arquivos"></div>
+
+<h2>Pedir upgrade de tag</h2>
+<div class="card">
+  <div id="erro-upgrade" class="erro" style="display: none;"></div>
+  <form id="form-upgrade">
+    <div class="linha-corrigir">
+      <div>
+        <label for="campo-area-upgrade">Área</label>
+        <select id="campo-area-upgrade">
+          {% for a in areas_validas %}<option value="{{ a }}">{{ a }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="campo-nivel-upgrade">Nível (1-4)</label>
+        <input type="number" id="campo-nivel-upgrade" min="1" max="4" value="1" required>
+      </div>
+    </div>
+    <label for="campo-justificativa-upgrade">Por que você precisa desse acesso?</label>
+    <textarea id="campo-justificativa-upgrade" rows="3" required></textarea>
+    <button type="submit">Solicitar</button>
+  </form>
+</div>
+
+<h2>Meus pedidos</h2>
+<div id="lista-solicitacoes"></div>
+{% endblock %}
+{% block script %}
+<script src="/static/js/perfil.js"></script>
+{% endblock %}

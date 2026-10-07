@@ -42,7 +42,20 @@ CREATE TABLE usuarios (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
+    -- Hash salgado (PBKDF2-HMAC-SHA256, ver app/core/auth.py) — nunca texto puro.
+    senha_hash VARCHAR(255) NOT NULL,
     ativo BOOLEAN DEFAULT TRUE,
+    -- Admin/"master": única conta com acesso à página /admin (gestão de
+    -- usuários, tags e documentos). Não existe papel de "curador" separado
+    -- (ver usuario_pode_curar em app/core/security.py) — isto é só para o
+    -- painel administrativo, não para aprovar tags.
+    is_admin BOOLEAN NOT NULL DEFAULT FALSE,
+    -- Dados de perfil (exibidos em /perfil). Não afetam o RBAC — quem
+    -- controla acesso a documentos continua sendo usuario_tags.
+    cargo VARCHAR(255),
+    -- Área de trabalho do usuário (mesma lista fechada de AREAS_VALIDAS em
+    -- app/core/areas.py — validado na aplicação, não repetido aqui em SQL).
+    departamento VARCHAR(50),
     data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -95,9 +108,11 @@ CREATE TABLE documentos (
     -- Status: 'pendente' = aguardando aprovação da tag sugerida
     --         'aprovado' = acessível (se o usuário tem permissão)
     status documento_status NOT NULL DEFAULT 'pendente',
-    -- Caminho ou referência para o arquivo original
-    -- (pode ser URL, path no S3, ou path local)
+    -- Rótulo legível do documento (não é mais um caminho real em disco —
+    -- hosts grátis têm filesystem efêmero; o texto fica em conteudo_texto).
     caminho_arquivo VARCHAR(1000) NOT NULL,
+    -- Texto completo do documento ingerido (extraído de .txt/.pdf).
+    conteudo_texto TEXT NOT NULL,
     -- Resumo executivo fiel ao documento (gerado pela IA, mas editável)
     resumo_executivo TEXT,
     -- Embedding do documento inteiro (vector de alta dimensão)
@@ -189,6 +204,28 @@ CREATE INDEX idx_logs_acesso_usuario ON logs_acesso(usuario_id);
 CREATE INDEX idx_logs_acesso_documento ON logs_acesso(documento_id);
 CREATE INDEX idx_logs_acesso_timestamp ON logs_acesso(timestamp);
 CREATE INDEX idx_logs_acesso_resultado ON logs_acesso(resultado);
+
+-- ============================================================================
+-- 7B. TABELA: SOLICITACOES_UPGRADE_TAG
+-- ============================================================================
+-- Pedido de um usuário por uma tag de acesso que ainda não tem (ex: "quero
+-- Marketing3"). Reaproveita o mesmo enum de status de tags_sugeridas e a
+-- mesma regra de aprovação (usuario_pode_curar): só aprova quem já tem,
+-- ele mesmo, a tag/nível pedido — sem papel de "curador" separado.
+CREATE TABLE solicitacoes_upgrade_tag (
+    id SERIAL PRIMARY KEY,
+    usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    tag_solicitada VARCHAR(50) NOT NULL CHECK (tag_solicitada ~ '^[A-Za-z]+\d+$'),
+    justificativa TEXT NOT NULL,
+    status tag_sugestao_status NOT NULL DEFAULT 'pendente_revisao',
+    criada_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    revisada_em TIMESTAMP,
+    revisor_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+    comentario_revisor TEXT
+);
+
+CREATE INDEX idx_solicitacoes_upgrade_usuario ON solicitacoes_upgrade_tag(usuario_id);
+CREATE INDEX idx_solicitacoes_upgrade_status ON solicitacoes_upgrade_tag(status);
 
 -- ============================================================================
 -- 8. FUNÇÃO HELPER: validar_acesso()

@@ -35,6 +35,9 @@ class UsuarioOut(BaseModel):
     nome: str
     email: str
     ativo: bool
+    is_admin: bool
+    cargo: Optional[str] = None
+    departamento: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -49,14 +52,15 @@ class UsuarioComTagsOut(UsuarioOut):
 # ============================================================================
 
 class LoginRequest(BaseModel):
-    """
-    Payload de login do protótipo.
-
-    Autenticação simplificada: apenas o email é verificado (usuário precisa
-    existir e estar ativo). Sem senha nesta fase — ver app/core/auth.py para
-    a justificativa e como plugar um provedor real (AD/SSO) no futuro.
-    """
+    """Payload de login — email cadastrado + senha."""
     email: EmailStr
+    senha: str = Field(min_length=1)
+
+
+class TrocarSenhaRequest(BaseModel):
+    """Payload para o usuário autenticado trocar a própria senha."""
+    senha_atual: str = Field(min_length=1)
+    senha_nova: str = Field(min_length=4, max_length=255)
 
 
 # ============================================================================
@@ -125,6 +129,82 @@ class AprovarTagRequest(BaseModel):
 
 class RejeitarTagRequest(BaseModel):
     """Rejeita a sugestão da IA — o documento permanece 'pendente' (inacessível)."""
+    comentario: str = Field(min_length=1)
+
+
+# ============================================================================
+# PERFIL / MEUS ARQUIVOS / UPGRADE DE TAG
+# ============================================================================
+
+class DocumentoAcessivelOut(BaseModel):
+    """Um documento aprovado que o usuário atual já tem permissão de acessar ('meus arquivos')."""
+    id: int
+    titulo: str
+    area: str
+    nivel_acesso_exigido: int
+    link: str
+
+
+class SolicitacaoUpgradeCriar(BaseModel):
+    """Pedido de um usuário por uma tag de acesso que ainda não tem."""
+    tag_solicitada: str = Field(min_length=2, max_length=50, pattern=r"^[A-Za-z]+\d+$")
+    justificativa: str = Field(min_length=1)
+
+
+class SolicitacaoUpgradeOut(BaseModel):
+    """Status de um pedido de upgrade de tag."""
+    id: int
+    tag_solicitada: str
+    justificativa: str
+    status: str
+    criada_em: datetime
+    revisada_em: Optional[datetime] = None
+    comentario_revisor: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+# ============================================================================
+# ADMIN (Fase 4)
+# ============================================================================
+
+class AdminTagCriar(BaseModel):
+    """Admin concede uma tag de acesso diretamente a um usuário."""
+    tag: str = Field(min_length=2, max_length=50, pattern=r"^[A-Za-z]+\d+$")
+    observacoes: Optional[str] = None
+
+
+class AdminUsuarioAtualizar(BaseModel):
+    """Campos editáveis de um usuário pelo admin — todos opcionais (atualização parcial)."""
+    ativo: Optional[bool] = None
+    is_admin: Optional[bool] = None
+    cargo: Optional[str] = None
+    departamento: Optional[str] = None
+
+
+class DocumentoAdminOut(BaseModel):
+    """Documento com todos os campos, para a visão de admin (inclui pendentes)."""
+    id: int
+    titulo: str
+    area: str
+    nivel_acesso_exigido: int
+    status: str
+    data_criacao: datetime
+    usuario_criador_nome: Optional[str] = None
+
+
+class SolicitacaoUpgradeAdminOut(SolicitacaoUpgradeOut):
+    """Pedido de upgrade com os dados de quem pediu, para a fila do admin."""
+    usuario_id: int
+    usuario_nome: str
+    usuario_email: str
+
+
+class AdminAprovarSolicitacaoRequest(BaseModel):
+    comentario: Optional[str] = None
+
+
+class AdminRejeitarSolicitacaoRequest(BaseModel):
     comentario: str = Field(min_length=1)
 
 

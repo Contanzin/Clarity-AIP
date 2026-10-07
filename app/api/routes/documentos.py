@@ -1,21 +1,27 @@
 """
 Rotas de ingestão de documentos do Clarity A.I.P.
 
-Passo 5: recebe um documento (texto colado ou upload .txt), gera o
-embedding e uma sugestão de tag via Gemini, e cria o Documento com
-status='pendente'. A aprovação humana da sugestão (Passo 6) ainda não
-existe — até lá, o documento fica sempre inacessível (fail-safe: nunca
-aprovado automaticamente pela IA).
+Recebe um documento (texto colado ou upload .txt/.pdf), gera o embedding e
+uma sugestão de tag via Gemini, e cria o Documento com status='pendente'. A
+aprovação humana da sugestão (ver tags_sugeridas.py) ainda não existe — até
+lá, o documento fica sempre inacessível (fail-safe: nunca aprovado
+automaticamente pela IA).
+
+O texto é guardado no banco (conteudo_texto), não em disco — hosts grátis
+(ex: Render free tier) apagam o filesystem a cada deploy/spin-down.
 """
 
+import io
 import logging
 import re
 import uuid
-from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.responses import PlainTextResponse
+from pypdf import PdfReader
+from pypdf.errors import PdfReadError
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import get_current_user
@@ -26,16 +32,14 @@ from app.core.gemini import (
     gerar_embedding,
     sugerir_tag,
 )
-from app.core.security import registrar_acesso, tag_precisa_atencao, validar_acesso
+from app.core.security import extrair_area_nivel, registrar_acesso, tag_precisa_atencao, validar_acesso
 from app.models import AcessoResultado, Documento, DocumentoStatus, TagSugerida, TagSugestaoStatus, Usuario
-from app.schemas import DocumentoOut, TagSugeridaOut
+from app.schemas import DocumentoAcessivelOut, DocumentoOut, TagSugeridaOut
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/documentos", tags=["documentos"])
 
-# clarity_aip/app/api/routes/documentos.py -> clarity_aip/uploads
-UPLOADS_DIR = Path(__file__).resolve().parents[3] / "uploads"
 TAMANHO_MAXIMO_BYTES = 2 * 1024 * 1024  # 2 MB — suficiente para texto, evita abuso
 
 
@@ -49,8 +53,6 @@ async def ingerir_documento(
 ) -> DocumentoOut:
     texto = await _extrair_texto(conteudo, arquivo)
 
-    # Só grava em disco depois que a IA responder com sucesso, para não
-    # deixar arquivo órfão em uploads/ se a chamada ao Gemini falhar.
     try:
         embedding = await gerar_embedding(texto)
         sugestao = await sugerir_tag(texto)
@@ -58,8 +60,6 @@ async def ingerir_documento(
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc))
     except (GeminiIndisponivelError, ValueError) as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
-
-    caminho_arquivo = _salvar_texto(titulo, texto)
 
     documento = Documento(
         titulo=titulo,
@@ -69,7 +69,8 @@ async def ingerir_documento(
         area=sugestao.area,
         nivel_acesso_exigido=sugestao.nivel,
         status=DocumentoStatus.PENDENTE,
-        caminho_arquivo=str(caminho_arquivo),
+        caminho_arquivo=_rotulo_arquivo(titulo),
+        conteudo_texto=texto,
         embedding=embedding,
         usuario_criador_id=usuario.id,
     )
@@ -107,6 +108,43 @@ async def ingerir_documento(
     )
 
 
+@router.get("", response_model=list[DocumentoAcessivelOut])
+async def listar_meus_documentos(
+    usuario: Usuario = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[DocumentoAcessivelOut]:
+    """
+    "Meus arquivos": todos os documentos aprovados que o usuário atual já tem
+    permissão de acessar — mesmo filtro de RBAC da busca (app/api/routes/busca.py),
+    só que listando tudo em vez de buscar por relevância semântica.
+    """
+    condicoes_acesso = [
+        and_(Documento.area == area, Documento.nivel_acesso_exigido <= nivel)
+        for area, nivel in (extrair_area_nivel(t.tag) for t in usuario.tags)
+        if area
+    ]
+    if not condicoes_acesso:
+        return []
+
+    stmt = (
+        select(Documento)
+        .where(Documento.status == DocumentoStatus.APROVADO, or_(*condicoes_acesso))
+        .order_by(Documento.titulo)
+    )
+    result = await db.execute(stmt)
+    documentos = result.scalars().all()
+    return [
+        DocumentoAcessivelOut(
+            id=d.id,
+            titulo=d.titulo,
+            area=d.area,
+            nivel_acesso_exigido=d.nivel_acesso_exigido,
+            link=f"/api/v1/documentos/{d.id}/arquivo",
+        )
+        for d in documentos
+    ]
+
+
 @router.get("/{documento_id}/arquivo", response_class=PlainTextResponse)
 async def obter_arquivo(
     documento_id: int,
@@ -135,16 +173,17 @@ async def obter_arquivo(
         raise HTTPException(status_code=codigo, detail="Acesso negado a este documento")
 
     documento = await db.get(Documento, documento_id)
-    return (UPLOADS_DIR.parent / documento.caminho_arquivo).read_text(encoding="utf-8")
+    return documento.conteudo_texto
 
 
 async def _extrair_texto(conteudo: Optional[str], arquivo: Optional[UploadFile]) -> str:
-    """Resolve o texto do documento a partir do campo 'conteudo' ou do 'arquivo' .txt."""
+    """Resolve o texto do documento a partir do campo 'conteudo' ou do 'arquivo' (.txt ou .pdf)."""
     if arquivo is not None:
-        if not (arquivo.filename or "").lower().endswith(".txt"):
+        nome = (arquivo.filename or "").lower()
+        if not (nome.endswith(".txt") or nome.endswith(".pdf")):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Apenas arquivos .txt são aceitos neste protótipo",
+                detail="Apenas arquivos .txt ou .pdf são aceitos",
             )
         dados = await arquivo.read()
         if len(dados) > TAMANHO_MAXIMO_BYTES:
@@ -152,19 +191,22 @@ async def _extrair_texto(conteudo: Optional[str], arquivo: Optional[UploadFile])
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Arquivo muito grande (máximo 2 MB)",
             )
-        try:
-            texto = dados.decode("utf-8")
-        except UnicodeDecodeError:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Arquivo precisa estar em UTF-8",
-            )
+        if nome.endswith(".pdf"):
+            texto = _extrair_texto_pdf(dados)
+        else:
+            try:
+                texto = dados.decode("utf-8")
+            except UnicodeDecodeError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Arquivo .txt precisa estar em UTF-8",
+                )
     elif conteudo:
         texto = conteudo
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Envie 'conteudo' (texto) ou 'arquivo' (.txt)",
+            detail="Envie 'conteudo' (texto) ou 'arquivo' (.txt ou .pdf)",
         )
 
     texto = texto.strip()
@@ -173,11 +215,25 @@ async def _extrair_texto(conteudo: Optional[str], arquivo: Optional[UploadFile])
     return texto
 
 
-def _salvar_texto(titulo: str, texto: str) -> Path:
-    """Persiste o texto ingerido em uploads/ e retorna o caminho relativo ao projeto."""
-    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+def _extrair_texto_pdf(dados: bytes) -> str:
+    """Extrai o texto de um PDF. Só funciona para PDF com texto real (não scan/imagem)."""
+    try:
+        leitor = PdfReader(io.BytesIO(dados))
+        if leitor.is_encrypted:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="PDF protegido por senha não é suportado")
+        texto = "\n".join(pagina.extract_text() or "" for pagina in leitor.pages)
+    except PdfReadError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Não foi possível ler o PDF (arquivo corrompido?)")
+
+    if not texto.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Não foi possível extrair texto do PDF (provavelmente é um scan/imagem sem OCR)",
+        )
+    return texto
+
+
+def _rotulo_arquivo(titulo: str) -> str:
+    """Rótulo legível pro documento (campo caminho_arquivo) — não é mais um caminho real em disco."""
     slug = re.sub(r"[^a-zA-Z0-9-]+", "-", titulo.lower()).strip("-")[:60] or "documento"
-    nome_arquivo = f"{slug}-{uuid.uuid4().hex[:8]}.txt"
-    caminho = UPLOADS_DIR / nome_arquivo
-    caminho.write_text(texto, encoding="utf-8")
-    return caminho.relative_to(UPLOADS_DIR.parent)
+    return f"{slug}-{uuid.uuid4().hex[:8]}"

@@ -12,10 +12,12 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.middleware.sessions import SessionMiddleware
 
+from app.api.routes import admin as admin_routes
 from app.api.routes import auth as auth_routes
 from app.api.routes import busca as busca_routes
 from app.api.routes import documentos as documentos_routes
 from app.api.routes import paginas as paginas_routes
+from app.api.routes import solicitacoes_upgrade as solicitacoes_upgrade_routes
 from app.api.routes import tags_sugeridas as tags_sugeridas_routes
 from app.api.routes import usuarios as usuarios_routes
 from app.config import settings
@@ -63,7 +65,8 @@ async def startup_event():
     logger.info("🚀 Iniciando Clarity A.I.P...")
     logger.info(f"Environment: {settings.app_env}")
     logger.info(f"Debug: {settings.debug}")
-    logger.info(f"Database: {settings.database_url}")
+    # Só o host/banco — a URL completa tem a senha e iria parar nos logs do provedor
+    logger.info(f"Database: {settings.database_url.rsplit('@', 1)[-1]}")
     
     # Inicializar banco (criar tabelas se não existirem)
     await init_db()
@@ -126,8 +129,10 @@ async def debug_db_info(db: AsyncSession = Depends(get_db)) -> dict:
 # ============================================================================
 
 app.include_router(auth_routes.router)
+app.include_router(admin_routes.router)
 app.include_router(usuarios_routes.router)
 app.include_router(documentos_routes.router)
 app.include_router(tags_sugeridas_routes.router)
+app.include_router(solicitacoes_upgrade_routes.router)
 app.include_router(busca_routes.router)
 app.include_router(paginas_routes.router)

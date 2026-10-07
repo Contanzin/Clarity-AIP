@@ -36,7 +36,7 @@ async def test_fluxo_completo_ingerir_aprovar_buscar_e_restringir(
     )
 
     # 1. Ingestão (usuário com tag Marketing2 cria o documento)
-    await client.post("/api/v1/auth/login", json={"email": usuario_com_tag["email"]})
+    await client.post("/api/v1/auth/login", json={"email": usuario_com_tag["email"], "senha": "12345"})
     resp = await client.post(
         "/api/v1/documentos",
         data={"titulo": "Documento de Teste Automatizado", "conteudo": "Conteúdo de teste para o pipeline de ingestão."},
@@ -68,7 +68,7 @@ async def test_fluxo_completo_ingerir_aprovar_buscar_e_restringir(
         assert dados_busca["resumo_executivo"] == "Resumo de teste."
 
         # 5. Usuário SEM nenhuma tag: mesma pergunta -> restrito, sem vazar título/resumo
-        await client.post("/api/v1/auth/login", json={"email": usuario_sem_tag["email"]})
+        await client.post("/api/v1/auth/login", json={"email": usuario_sem_tag["email"], "senha": "12345"})
         resp = await client.post("/api/v1/busca", json={"pergunta": "pergunta de teste"})
         assert resp.status_code == 200
         dados_restrito = resp.json()
@@ -90,6 +90,6 @@ async def test_busca_exige_autenticacao(client):
 
 
 async def test_ingerir_documento_sem_conteudo_da_erro(client, usuario_com_tag):
-    await client.post("/api/v1/auth/login", json={"email": usuario_com_tag["email"]})
+    await client.post("/api/v1/auth/login", json={"email": usuario_com_tag["email"], "senha": "12345"})
     resp = await client.post("/api/v1/documentos", data={"titulo": "Sem conteúdo nem arquivo"})
     assert resp.status_code == 400

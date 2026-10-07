@@ -5,6 +5,7 @@ Carrega variáveis de ambiente e disponibiliza settings globais.
 """
 
 import os
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 from typing import Optional
 
@@ -36,6 +37,20 @@ class Settings(BaseSettings):
     postgres_db: str = os.getenv("POSTGRES_DB", "clarity_aip")
     postgres_user: str = os.getenv("POSTGRES_USER", "clarity_user")
     postgres_password: str = os.getenv("POSTGRES_PASSWORD", "clarity_password")
+
+    @field_validator("database_url")
+    @classmethod
+    def _forcar_driver_asyncpg(cls, v: str) -> str:
+        """
+        Provedores de hospedagem (Render, Railway, etc.) fornecem a
+        DATABASE_URL no formato padrão 'postgres://' ou 'postgresql://' —
+        o SQLAlchemy async precisa do dialeto explícito 'postgresql+asyncpg://'.
+        """
+        if v.startswith("postgres://"):
+            return "postgresql+asyncpg://" + v[len("postgres://"):]
+        if v.startswith("postgresql://"):
+            return "postgresql+asyncpg://" + v[len("postgresql://"):]
+        return v
 
     # === GEMINI API ===
     # ⚠️ AVISO DE PRIVACIDADE:

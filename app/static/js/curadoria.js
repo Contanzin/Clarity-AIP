@@ -92,7 +92,7 @@ async function revisar(tagId, acao, card) {
 
   if (!resp.ok) {
     const dados = await resp.json().catch(() => ({}));
-    caixaErro.textContent = dados.detail || "Não foi possível concluir a ação.";
+    caixaErro.textContent = extrairErro(dados, "Não foi possível concluir a ação.");
     caixaErro.style.display = "block";
     return;
   }

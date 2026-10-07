@@ -9,18 +9,19 @@
 document.getElementById("form-login").addEventListener("submit", async (ev) => {
   ev.preventDefault();
   const email = document.getElementById("email").value.trim();
+  const senha = document.getElementById("senha").value;
   const caixaErro = document.getElementById("erro-login");
   caixaErro.style.display = "none";
 
   const resp = await fetch("/api/v1/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({ email, senha }),
   });
 
   if (!resp.ok) {
     const dados = await resp.json().catch(() => ({}));
-    caixaErro.textContent = dados.detail || "Não foi possível entrar. Verifique o email.";
+    caixaErro.textContent = extrairErro(dados, "Não foi possível entrar. Verifique o email e a senha.");
     caixaErro.style.display = "block";
     return;
   }

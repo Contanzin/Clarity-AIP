@@ -28,7 +28,7 @@ document.getElementById("form-busca").addEventListener("submit", async (ev) => {
 
     if (!resp.ok) {
       const dados = await resp.json().catch(() => ({}));
-      caixaResultado.innerHTML = `<div class="erro">${escaparHtml(dados.detail || "Erro ao buscar.")}</div>`;
+      caixaResultado.innerHTML = `<div class="erro">${escaparHtml(extrairErro(dados, "Erro ao buscar."))}</div>`;
       return;
     }
 

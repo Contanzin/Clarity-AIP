@@ -3,13 +3,12 @@
 {% block conteudo %}
 <div class="card" style="max-width: 380px; margin: 3rem auto;">
   <h1>Entrar</h1>
-  <p style="color: var(--cor-texto-suave); font-size: 0.9rem;">
-    Protótipo: login simplificado, só pelo email cadastrado (sem senha).
-  </p>
   <div id="erro-login" class="erro" style="display: none;"></div>
   <form id="form-login">
     <label for="email">Email corporativo</label>
     <input type="email" id="email" name="email" placeholder="alice@claro.corp" required>
+    <label for="senha">Senha</label>
+    <input type="password" id="senha" name="senha" required>
     <button type="submit">Entrar</button>
   </form>
 </div>

@@ -12,11 +12,13 @@
 -- 1. USUÁRIOS DE TESTE
 -- ============================================================================
 
-INSERT INTO usuarios (nome, email, ativo) VALUES
-    ('Alice Silva', 'alice@claro.corp', TRUE),
-    ('Bob Santos', 'bob@claro.corp', TRUE),
-    ('Carol Oliveira', 'carol@claro.corp', TRUE),
-    ('David Pereira', 'david@claro.corp', FALSE);  -- Inativo
+-- Senha padrão de todos os usuários de teste: "12345" (hash PBKDF2 abaixo).
+-- Trocável em /perfil após o login.
+INSERT INTO usuarios (nome, email, senha_hash, ativo, cargo, departamento, is_admin) VALUES
+    ('Alice Silva', 'alice@claro.corp', 'pbkdf2_sha256$260000$2f16ee636107a76c31e5eb09a1dd0ed3$ed9382aa5bd03b716e58f91aa0b9c679c83a5ba251e23b83327430c0bd09e746', TRUE, 'Analista de Marketing', 'Marketing', FALSE),
+    ('Bob Santos', 'bob@claro.corp', 'pbkdf2_sha256$260000$4752b2d612952daf96ba5639de5fe394$fa1fd23bc6c6d7b5e14695f2ee702046d475a77075a7197d02ebb1c43b977278', TRUE, 'Gerente de Vendas', 'Vendas', FALSE),
+    ('Carol Oliveira', 'carol@claro.corp', 'pbkdf2_sha256$260000$0a752dd7f0d0c1bd83356aaabc2f977c$b6fa48516b8388762ee0a5325db5f2da87f4ab3478114ccb9e4c2a4f9016e146', TRUE, 'Administradora do Sistema', 'TI', TRUE),
+    ('David Pereira', 'david@claro.corp', 'pbkdf2_sha256$260000$f14d3f4fdbf375d6bf5ec3483a378b7f$9e7baee21d0e469a855aa05d120d018b7b48f40c8188899c03e916bfaae88f95', FALSE, 'Analista de Suporte', 'Suporte', FALSE);  -- Inativo
 
 -- ============================================================================
 -- 2. TAGS DE ACESSO (Permissões)
@@ -51,15 +53,16 @@ INSERT INTO usuario_tags (usuario_id, tag, atribuida_por_usuario_id, observacoes
 -- Documento 1: "Políticas de Desconto em Marketing"
 -- Status: pendente (ainda não foi aprovado)
 -- Area: Marketing, Nível: 2
-INSERT INTO documentos 
-    (titulo, area, nivel_acesso_exigido, status, caminho_arquivo, usuario_criador_id)
+INSERT INTO documentos
+    (titulo, area, nivel_acesso_exigido, status, caminho_arquivo, conteudo_texto, usuario_criador_id)
 VALUES
     (
         'Políticas de Desconto em Marketing',
         'Marketing',
         2,
         'pendente',
-        '/docs/marketing/politicas_desconto.pdf',
+        'politicas-desconto-marketing-seed',
+        'Dado sintético de teste. Política de descontos: desconto máximo de 20% para revendedores, exige aprovação gerencial acima desse valor.',
         1
     );
 
@@ -67,14 +70,15 @@ VALUES
 -- Status: pendente
 -- Area: Dados, Nível: 3 (muito confidencial)
 INSERT INTO documentos
-    (titulo, area, nivel_acesso_exigido, status, caminho_arquivo, usuario_criador_id)
+    (titulo, area, nivel_acesso_exigido, status, caminho_arquivo, conteudo_texto, usuario_criador_id)
 VALUES
     (
         'Dados de Clientes Premium',
         'Dados',
         3,
         'pendente',
-        '/docs/dados/clientes_premium.xlsx',
+        'dados-clientes-premium-seed',
+        'Dado sintético de teste. Relatório de clientes premium: nomes, CPF mascarado e histórico de compras dos últimos 12 meses.',
         1
     );
 
@@ -82,14 +86,15 @@ VALUES
 -- Status: pendente
 -- Area: Vendas, Nível: 1
 INSERT INTO documentos
-    (titulo, area, nivel_acesso_exigido, status, caminho_arquivo, usuario_criador_id)
+    (titulo, area, nivel_acesso_exigido, status, caminho_arquivo, conteudo_texto, usuario_criador_id)
 VALUES
     (
         'Metas de Vendas 2026',
         'Vendas',
         1,
         'pendente',
-        '/docs/vendas/metas_2026.pdf',
+        'metas-vendas-2026-seed',
+        'Dado sintético de teste. Metas comerciais de 2026: crescimento de 15% em receita e expansão para 3 novas regiões.',
         2
     );
 

@@ -23,7 +23,6 @@ logs_acesso (Passo 8 — auditoria).
 """
 
 import logging
-from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Request
@@ -50,8 +49,6 @@ router = APIRouter(prefix="/api/v1/busca", tags=["busca"])
 # reajuste com um acervo maior e mais variado.
 DISTANCIA_MAXIMA_RELEVANTE = 0.4
 
-BASE_DIR = Path(__file__).resolve().parents[3]
-
 
 @router.post("", response_model=BuscaResponse)
 async def buscar(
@@ -69,8 +66,7 @@ async def buscar(
         documento = await db.get(Documento, documento_id)
 
         if not documento.resumo_executivo:
-            texto = _ler_conteudo(documento.caminho_arquivo)
-            documento.resumo_executivo = await gerar_resumo_executivo(texto)
+            documento.resumo_executivo = await gerar_resumo_executivo(documento.conteudo_texto)
             await db.commit()
             await db.refresh(documento)
 
@@ -161,7 +157,3 @@ async def _buscar_melhor_global(db: AsyncSession, embedding_pergunta: list[float
     if linha is None or linha.distancia > DISTANCIA_MAXIMA_RELEVANTE:
         return None
     return linha.id, linha.area, linha.nivel_acesso_exigido
-
-
-def _ler_conteudo(caminho_relativo: str) -> str:
-    return (BASE_DIR / caminho_relativo).read_text(encoding="utf-8")

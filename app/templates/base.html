@@ -4,6 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block titulo %}Clarity A.I.P{% endblock %}</title>
+  <script>
+    (function () {
+      var salvo = localStorage.getItem("tema");
+      var tema = salvo === "light" || salvo === "dark"
+        ? salvo
+        : (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.setAttribute("data-theme", tema);
+    })();
+  </script>
   <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
@@ -13,8 +22,13 @@
       <a href="/busca">Busca</a>
       <a href="/enviar">Enviar documento</a>
       <a href="/curadoria">Curadoria</a>
+      <a href="/perfil">Perfil</a>
+      <span id="nav-admin"></span>
     </nav>
-    <span class="usuario" id="usuario-logado"></span>
+    <span class="usuario">
+      <button type="button" class="botao-tema" id="botao-tema" aria-label="Alternar tema claro/escuro"></button>
+      <span id="usuario-logado"></span>
+    </span>
   </header>
   <main>
     {% block conteudo %}{% endblock %}

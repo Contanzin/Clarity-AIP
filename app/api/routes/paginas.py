@@ -40,3 +40,17 @@ async def pagina_curadoria(request: Request):
     return request.app.state.templates.TemplateResponse(
         request, "curadoria.html", {"areas_validas": AREAS_VALIDAS}
     )
+
+
+@router.get("/perfil", response_class=HTMLResponse)
+async def pagina_perfil(request: Request):
+    return request.app.state.templates.TemplateResponse(
+        request, "perfil.html", {"areas_validas": AREAS_VALIDAS}
+    )
+
+
+@router.get("/admin", response_class=HTMLResponse)
+async def pagina_admin(request: Request):
+    return request.app.state.templates.TemplateResponse(
+        request, "admin.html", {"areas_validas": AREAS_VALIDAS}
+    )

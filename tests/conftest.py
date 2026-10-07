@@ -18,11 +18,13 @@ import uuid
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
+from app.core.auth import gerar_hash_senha
 from app.core.database import SessionLocal
 from app.main import app
 from app.models import Usuario, UsuarioTag
 
 EMBEDDING_FAKE = [0.1] * 768
+SENHA_TESTE = "12345"
 
 
 @pytest_asyncio.fixture
@@ -37,7 +39,7 @@ async def usuario_com_tag():
     """Usuário de teste ativo com a tag Marketing2 — limpo ao final."""
     email = f"teste-{uuid.uuid4().hex[:8]}@teste.claro.corp"
     async with SessionLocal() as db:
-        usuario = Usuario(nome="Usuario de Teste", email=email, ativo=True)
+        usuario = Usuario(nome="Usuario de Teste", email=email, senha_hash=gerar_hash_senha(SENHA_TESTE), ativo=True)
         db.add(usuario)
         await db.flush()
         db.add(UsuarioTag(usuario_id=usuario.id, tag="Marketing2"))
@@ -58,7 +60,7 @@ async def usuario_sem_tag():
     """Usuário de teste ativo, sem nenhuma tag de acesso — limpo ao final."""
     email = f"teste-{uuid.uuid4().hex[:8]}@teste.claro.corp"
     async with SessionLocal() as db:
-        usuario = Usuario(nome="Usuario Sem Tag", email=email, ativo=True)
+        usuario = Usuario(nome="Usuario Sem Tag", email=email, senha_hash=gerar_hash_senha(SENHA_TESTE), ativo=True)
         db.add(usuario)
         await db.commit()
         usuario_id = usuario.id

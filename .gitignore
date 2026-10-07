@@ -23,5 +23,10 @@ Thumbs.db
 /tmp/
 *.sqlite3
 
+# Notas internas (não fazem parte do projeto)
+/docs/PROGRESSO.md
+/docs/ROTEIRO_VIDEO_SPRINT3.md
+/docs/PASSO_3_ORM.md
+
 # Logs
 *.log

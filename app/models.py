@@ -74,7 +74,11 @@ class Usuario(Base):
     id = Column(Integer, primary_key=True, index=True)
     nome = Column(String(255), nullable=False)
     email = Column(String(255), nullable=False, unique=True, index=True)
+    senha_hash = Column(String(255), nullable=False)
     ativo = Column(Boolean, default=True, nullable=False)
+    is_admin = Column(Boolean, default=False, nullable=False)
+    cargo = Column(String(255), nullable=True)
+    departamento = Column(String(50), nullable=True)
     data_criacao = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
     data_atualizacao = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
@@ -104,6 +108,12 @@ class Usuario(Base):
         "TagSugerida",
         back_populates="revisor",
         foreign_keys="TagSugerida.revisor_id"
+    )
+    solicitacoes_upgrade = relationship(
+        "SolicitacaoUpgradeTag",
+        back_populates="usuario",
+        cascade="all, delete-orphan",
+        foreign_keys="SolicitacaoUpgradeTag.usuario_id",
     )
 
     def __repr__(self):
@@ -193,6 +203,10 @@ class Documento(Base):
         index=True
     )
     caminho_arquivo = Column(String(1000), nullable=False)
+    # Texto completo do documento, guardado no banco (não em disco) — hosts
+    # grátis (ex: Render free tier) têm filesystem efêmero, que é apagado a
+    # cada deploy/spin-down. caminho_arquivo vira só um rótulo legível.
+    conteudo_texto = Column(Text, nullable=False)
     resumo_executivo = Column(Text, nullable=True)
     # Vector(768): embedding de 768 dimensões (padrão Gemini)
     embedding = Column(Vector(768), nullable=True)
@@ -281,6 +295,44 @@ class TagSugerida(Base):
 
     def __repr__(self):
         return f"<TagSugerida(documento_id={self.documento_id}, tag={self.tag_sugerida}, confianca={self.confianca})>"
+
+
+class SolicitacaoUpgradeTag(Base):
+    """
+    Pedido de um usuário por uma tag de acesso que ainda não tem.
+
+    Reaproveita o mesmo enum de status de TagSugerida (tag_sugestao_status)
+    e a mesma regra de aprovação de usuario_pode_curar (app/core/security.py):
+    só aprova quem já tem, ele mesmo, a tag/nível pedido. Na aprovação, cria
+    (ou atualiza) a UsuarioTag correspondente para o solicitante.
+    """
+
+    __tablename__ = "solicitacoes_upgrade_tag"
+
+    id = Column(Integer, primary_key=True, index=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id", ondelete="CASCADE"), nullable=False, index=True)
+    tag_solicitada = Column(String(50), nullable=False)
+    justificativa = Column(Text, nullable=False)
+    status = Column(
+        SQLEnum(TagSugestaoStatus, name="tag_sugestao_status", values_callable=lambda enum_cls: [e.value for e in enum_cls]),
+        nullable=False,
+        default=TagSugestaoStatus.PENDENTE_REVISAO,
+        index=True,
+    )
+    criada_em = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+    revisada_em = Column(DateTime(timezone=True), nullable=True)
+    revisor_id = Column(Integer, ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True)
+    comentario_revisor = Column(Text, nullable=True)
+
+    __table_args__ = (
+        CheckConstraint("tag_solicitada ~ '^[A-Za-z]+\\d+$'", name="ck_solicitacao_tag_format"),
+    )
+
+    usuario = relationship("Usuario", back_populates="solicitacoes_upgrade", foreign_keys=[usuario_id])
+    revisor = relationship("Usuario", foreign_keys=[revisor_id])
+
+    def __repr__(self):
+        return f"<SolicitacaoUpgradeTag(usuario_id={self.usuario_id}, tag={self.tag_solicitada}, status={self.status})>"
 
 
 class LogAccesso(Base):

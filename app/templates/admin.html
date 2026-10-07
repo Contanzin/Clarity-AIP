@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block titulo %}Admin — Clarity A.I.P{% endblock %}
+{% block conteudo %}
+<h1>Administração</h1>
+
+<div class="abas" role="tablist">
+  <button type="button" class="aba ativa" role="tab" aria-selected="true" aria-controls="painel-solicitacoes" id="aba-solicitacoes" data-painel="painel-solicitacoes">Pedidos de upgrade</button>
+  <button type="button" class="aba" role="tab" aria-selected="false" aria-controls="painel-usuarios" id="aba-usuarios" data-painel="painel-usuarios">Usuários</button>
+  <button type="button" class="aba" role="tab" aria-selected="false" aria-controls="painel-documentos" id="aba-documentos" data-painel="painel-documentos">Arquivos</button>
+</div>
+
+<div id="painel-solicitacoes" class="painel-aba" role="tabpanel" aria-labelledby="aba-solicitacoes">
+  <div id="lista-solicitacoes-admin"></div>
+</div>
+
+<div id="painel-usuarios" class="painel-aba" role="tabpanel" aria-labelledby="aba-usuarios" hidden>
+  <div id="lista-usuarios-admin"></div>
+</div>
+
+<div id="painel-documentos" class="painel-aba" role="tabpanel" aria-labelledby="aba-documentos" hidden>
+  <div id="lista-documentos-admin"></div>
+</div>
+{% endblock %}
+{% block script %}
+<script>
+  const AREAS_VALIDAS = {{ areas_validas | tojson }};
+</script>
+<script src="/static/js/admin.js"></script>
+{% endblock %}

@@ -16,7 +16,7 @@ document.getElementById("form-envio").addEventListener("submit", async (ev) => {
   const arquivo = arquivoInput.files[0];
 
   if (!conteudo && !arquivo) {
-    caixaErro.textContent = "Cole o conteúdo ou selecione um arquivo .txt.";
+    caixaErro.textContent = "Cole o conteúdo ou selecione um arquivo .txt ou .pdf.";
     caixaErro.style.display = "block";
     return;
   }
@@ -44,7 +44,7 @@ document.getElementById("form-envio").addEventListener("submit", async (ev) => {
     const dados = await resp.json().catch(() => ({}));
 
     if (!resp.ok) {
-      caixaErro.textContent = dados.detail || "Não foi possível enviar o documento.";
+      caixaErro.textContent = extrairErro(dados, "Não foi possível enviar o documento.");
       caixaErro.style.display = "block";
       return;
     }

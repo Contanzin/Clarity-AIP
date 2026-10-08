@@ -46,7 +46,11 @@ async function inicializarNav() {
     marcarLinkAtivo();
     return;
   }
-  alvo.textContent = `${usuario.nome} `;
+  const perfil = document.createElement("a");
+  perfil.href = "/perfil";
+  perfil.textContent = usuario.nome;
+  perfil.title = "Ver perfil";
+  alvo.replaceChildren(perfil);
   const navAdmin = document.getElementById("nav-admin");
   if (navAdmin && usuario.is_admin) {
     navAdmin.innerHTML = '<a href="/admin">Admin</a>';
